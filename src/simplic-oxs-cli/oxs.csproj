@@ -30,8 +30,8 @@
   <ItemGroup>
     <PackageReference Include="ini-parser" Version="3.4.0" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
-    <PackageReference Include="Simplic.OxS.Flow.Meta" Version="1.0.525.1215" />
-    <PackageReference Include="Simplic.OxS.Flow.Runtime" Version="1.1.2525.1227" />
+    <PackageReference Include="Simplic.OxS.Flow.Meta" Version="1.0.626.417-ci.36440" />
+    <PackageReference Include="Simplic.OxS.Flow.Runtime" Version="1.1.3926.414-ci.36440" />
     <PackageReference Include="Spectre.Console.Cli" Version="0.53.1" />
   </ItemGroup>
 

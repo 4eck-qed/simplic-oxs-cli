@@ -14,9 +14,9 @@ internal static class RegisterFlow
     /// <param name="config">The configurator to register commands with.</param>
     public static void RegisterCommands(IConfigurator config)
     {
-        config.AddBranch<Flow.FlowSettings>("flow", add =>
-        {
-            add.AddCommand<Flow.FlowPushNodeDefCommand>("push-node-def");
-        });
+        config.AddBranch<Flow.FlowSettings>(
+            "flow",
+            add => add.AddCommand<Flow.FlowPushNodeDefCommand>("push-node-def")
+        );
     }
 }

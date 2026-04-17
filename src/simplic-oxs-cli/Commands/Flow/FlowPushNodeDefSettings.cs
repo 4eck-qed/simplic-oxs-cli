@@ -1,14 +1,12 @@
-using Spectre.Console.Cli;
 using System.ComponentModel;
+using Spectre.Console.Cli;
 
 namespace oxs.Commands.Flow;
 
 /// <summary>
 /// Base settings for flow-related commands.
 /// </summary>
-public class FlowSettings : CommandSettings
-{
-}
+public class FlowSettings : CommandSettings { }
 
 /// <summary>
 /// Settings for pushing node definitions to the flow service.

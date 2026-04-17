@@ -1,11 +1,11 @@
-﻿using oxs.Configuration;
-using Simplic.OxS.Flow.Meta;
-using Spectre.Console;
-using Spectre.Console.Cli;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Runtime.Loader;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using oxs.Configuration;
+using Simplic.OxS.Flow.Meta;
+using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace oxs.Commands.Flow;
 
@@ -21,7 +21,11 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
     /// <param name="settings">The settings for pushing node definitions.</param>
     /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
     /// <returns>An exit code indicating success (0) or failure (1).</returns>
-    public override int Execute(CommandContext context, FlowPushNodeDefSettings settings, CancellationToken cancellationToken)
+    public override int Execute(
+        CommandContext context,
+        FlowPushNodeDefSettings settings,
+        CancellationToken cancellationToken
+    )
     {
         return ExecuteAsync(context, settings, cancellationToken).GetAwaiter().GetResult();
     }
@@ -33,7 +37,11 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
     /// <param name="settings">The settings for pushing node definitions.</param>
     /// <param name="cancellationToken">Token to monitor for cancellation requests.</param>
     /// <returns>A task representing the asynchronous operation with an exit code indicating success (0) or failure (1).</returns>
-    private async Task<int> ExecuteAsync(CommandContext context, FlowPushNodeDefSettings settings, CancellationToken cancellationToken)
+    private async Task<int> ExecuteAsync(
+        CommandContext context,
+        FlowPushNodeDefSettings settings,
+        CancellationToken cancellationToken
+    )
     {
         if (string.IsNullOrWhiteSpace(settings.DllPath))
         {
@@ -51,12 +59,16 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
         var config = await configManager.LoadConfigurationAsync(settings.Section);
         if (config == null)
         {
-            AnsiConsole.MarkupLine($"[red]Configuration not found for section '{settings.Section}'. Run 'oxs configure env'.[/]");
+            AnsiConsole.MarkupLine(
+                $"[red]Configuration not found for section '{settings.Section}'. Run 'oxs configure env'.[/]"
+            );
             return 1;
         }
 
-        var apiBase = config.Api == "prod" ? "https://oxs.simplic.io/flow-api/v1" :
-                      config.Api == "staging" ? "https://dev-oxs.simplic.io/flow-api/v1" : null;
+        var apiBase =
+            config.Api == "prod" ? "https://oxs.simplic.io/flow-api/v1"
+            : config.Api == "staging" ? "https://dev-oxs.simplic.io/flow-api/v1"
+            : null;
         if (apiBase == null)
         {
             AnsiConsole.MarkupLine($"[red]Unknown API environment: {config.Api}[/]");
@@ -65,11 +77,15 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
 
         if (string.IsNullOrWhiteSpace(config.Token))
         {
-            AnsiConsole.MarkupLine("[red]Missing bearer token in configuration. Run 'oxs configure env'.[/]");
+            AnsiConsole.MarkupLine(
+                "[red]Missing bearer token in configuration. Run 'oxs configure env'.[/]"
+            );
             return 1;
         }
 
-        AnsiConsole.MarkupLine($"[blue]Analyzing assembly:[/] [yellow]{Path.GetFullPath(settings.DllPath)}[/]");
+        AnsiConsole.MarkupLine(
+            $"[blue]Analyzing assembly:[/] [yellow]{Path.GetFullPath(settings.DllPath)}[/]"
+        );
 
         var analyzer = new NodeDefinitionAnalyzer();
         List<NodeDefinition> defs;
@@ -87,24 +103,28 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
         if (defs.Count == 0)
         {
             AnsiConsole.MarkupLine("[yellow]No flow node definitions found.[/]");
-            AnsiConsole.MarkupLine("[dim]Hint: Ensure your classes are decorated with [[FlowNodeMeta]] attribute.[/]");
+            AnsiConsole.MarkupLine(
+                "[dim]Hint: Ensure your classes are decorated with [[FlowNodeMeta]] attribute.[/]"
+            );
             return 0;
         }
 
-        AnsiConsole.MarkupLine($"[blue]Found[/] [green]{defs.Count}[/] [blue]node definition(s). Pushing to API...[/]");
+        AnsiConsole.MarkupLine(
+            $"[blue]Found[/] [green]{defs.Count}[/] [blue]node definition(s). Pushing to API...[/]"
+        );
 
         using var http = new HttpClient();
-        http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.Token);
-        http.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+        http.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", config.Token);
+        http.DefaultRequestHeaders.Accept.Add(
+            new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json")
+        );
 
         var jsonOptions = new JsonSerializerOptions
         {
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-            Converters =
-            {
-                new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)
-            },
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
         };
 
         var success = 0;
@@ -119,11 +139,18 @@ public class FlowPushNodeDefCommand : Command<FlowPushNodeDefSettings>
             {
                 success++;
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.Conflict || response.StatusCode == System.Net.HttpStatusCode.BadRequest)
+            else if (
+                response.StatusCode == System.Net.HttpStatusCode.Conflict
+                || response.StatusCode == System.Net.HttpStatusCode.BadRequest
+            )
             {
                 var putReq = PutNodeDefinitionRequest.FromDefinition(def);
                 var putJson = JsonSerializer.Serialize(putReq, jsonOptions);
-                var putContent = new StringContent(putJson, System.Text.Encoding.UTF8, "application/json");
+                var putContent = new StringContent(
+                    putJson,
+                    System.Text.Encoding.UTF8,
+                    "application/json"
+                );
                 var putResp = await http.PutAsync($"{apiBase}/NodeDefinition/{def.Id}", putContent);
                 if (putResp.IsSuccessStatusCode)
                     success++;
@@ -323,6 +350,11 @@ public class NodeDefinition
     /// Gets or sets the event name associated with the node.
     /// </summary>
     public string? EventName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the deployment hook key associated with the node.
+    /// </summary>
+    public string? DeploymentHook { get; set; }
 }
 
 /// <summary>
@@ -401,27 +433,34 @@ public class PostNodeDefinitionRequest
     public NodePackage? Package { get; set; }
 
     /// <summary>
+    /// Gets or sets the deployment hook key associated with the node.
+    /// </summary>
+    public string? DeploymentHook { get; set; }
+
+    /// <summary>
     /// Creates a PostNodeDefinitionRequest from a NodeDefinition object.
     /// </summary>
     /// <param name="def">The node definition to convert.</param>
     /// <returns>A new PostNodeDefinitionRequest instance.</returns>
-    public static PostNodeDefinitionRequest FromDefinition(NodeDefinition def) => new PostNodeDefinitionRequest
-    {
-        Id = def.Id,
-        Type = def.Type,
-        EventName = def.EventName,
-        DisplayName = def.DisplayName,
-        DisplayKey = def.DisplayKey,
-        Description = def.Description,
-        Markdown = def.Markdown,
-        Target = def.Target,
-        CustomDataInPinTemplate = def.CustomDataInPinTemplate,
-        CustomFlowOutPinTemplate = def.CustomFlowOutPinTemplate,
-        DataInPins = def.DataInPins,
-        DataOutPins = def.DataOutPins,
-        FlowOutPins = def.FlowOutPins,
-        Package = def.Package
-    };
+    public static PostNodeDefinitionRequest FromDefinition(NodeDefinition def) =>
+        new PostNodeDefinitionRequest
+        {
+            Id = def.Id,
+            Type = def.Type,
+            EventName = def.EventName,
+            DisplayName = def.DisplayName,
+            DisplayKey = def.DisplayKey,
+            Description = def.Description,
+            Markdown = def.Markdown,
+            Target = def.Target,
+            CustomDataInPinTemplate = def.CustomDataInPinTemplate,
+            CustomFlowOutPinTemplate = def.CustomFlowOutPinTemplate,
+            DataInPins = def.DataInPins,
+            DataOutPins = def.DataOutPins,
+            FlowOutPins = def.FlowOutPins,
+            Package = def.Package,
+            DeploymentHook = def.DeploymentHook,
+        };
 }
 
 /// <summary>
@@ -452,6 +491,7 @@ public class PutNodeDefinitionRequest : PostNodeDefinitionRequest
         req.DataOutPins = baseReq.DataOutPins;
         req.FlowOutPins = baseReq.FlowOutPins;
         req.Package = baseReq.Package;
+        req.DeploymentHook = baseReq.DeploymentHook;
         return req;
     }
 }
@@ -471,14 +511,33 @@ public class NodeDefinitionAnalyzer
     public List<NodeDefinition> AnalyzeAssembly(string assemblyPath, bool verbose = false)
     {
         var list = new List<NodeDefinition>();
+        var fullPath = Path.GetFullPath(assemblyPath);
+        var probeDir = Path.GetDirectoryName(fullPath)!;
+        var resolver = new AssemblyDependencyResolver(fullPath);
         var ctx = new AssemblyLoadContext("FlowNodeDef", isCollectible: true);
+
+        ctx.Resolving += (loadCtx, name) =>
+        {
+            var resolved = resolver.ResolveAssemblyToPath(name);
+            if (resolved != null && File.Exists(resolved))
+                return loadCtx.LoadFromAssemblyPath(resolved);
+
+            var candidate = Path.Combine(probeDir, name.Name + ".dll");
+            if (File.Exists(candidate))
+                return loadCtx.LoadFromAssemblyPath(candidate);
+
+            return null;
+        };
+
         Assembly asm;
         try
         {
-            asm = ctx.LoadFromAssemblyPath(Path.GetFullPath(assemblyPath));
+            asm = ctx.LoadFromAssemblyPath(fullPath);
             if (verbose)
             {
-                AnsiConsole.MarkupLine($"[dim]Loaded assembly: {asm.GetName().Name} v{asm.GetName().Version}[/]");
+                AnsiConsole.MarkupLine(
+                    $"[dim]Loaded assembly: {asm.GetName().Name} v{asm.GetName().Version}[/]"
+                );
                 AnsiConsole.MarkupLine($"[dim]Assembly location: {asm.Location}[/]");
             }
         }
@@ -488,18 +547,20 @@ public class NodeDefinitionAnalyzer
         }
 
         Type[] types;
-        try 
-        { 
+        try
+        {
             types = asm.GetTypes();
             if (verbose)
                 AnsiConsole.MarkupLine($"[dim]Found {types.Length} type(s) in assembly[/]");
         }
-        catch (ReflectionTypeLoadException ex) 
-        { 
+        catch (ReflectionTypeLoadException ex)
+        {
             types = ex.Types.Where(t => t != null)!.Cast<Type>().ToArray();
             if (verbose)
             {
-                AnsiConsole.MarkupLine($"[yellow]Warning: Some types could not be loaded. Processing {types.Length} available types.[/]");
+                AnsiConsole.MarkupLine(
+                    $"[yellow]Warning: Some types could not be loaded. Processing {types.Length} available types.[/]"
+                );
                 if (ex.LoaderExceptions != null)
                 {
                     foreach (var loaderEx in ex.LoaderExceptions.Take(3))
@@ -511,11 +572,14 @@ public class NodeDefinitionAnalyzer
             }
         }
 
-        int abstractCount = 0, interfaceCount = 0, genericCount = 0, noAttributeCount = 0;
+        int abstractCount = 0,
+            interfaceCount = 0,
+            genericCount = 0,
+            noAttributeCount = 0;
 
         foreach (var t in types)
         {
-            if (t == null) 
+            if (t == null)
                 continue;
 
             if (t.IsAbstract)
@@ -544,7 +608,11 @@ public class NodeDefinitionAnalyzer
             }
 
             if (verbose)
-                AnsiConsole.MarkupLine($"[green]✓ Found flow node:[/] [cyan]{t.FullName ?? t.Name}[/]");
+            {
+                AnsiConsole.MarkupLine(
+                    $"[green]✓ Found flow node:[/] [cyan]{t.FullName ?? t.Name}[/]"
+                );
+            }
 
             string id = meta.Id ?? t.FullName ?? t.Name;
             var nodeType = meta.Type;
@@ -561,7 +629,7 @@ public class NodeDefinitionAnalyzer
                 Name = asm.GetName().Name,
                 Version = "latest",
                 AssemblyName = asm.GetName().Name,
-                ClassName = t.Name
+                ClassName = t.Name,
             };
 
             // Pin attributes
@@ -571,42 +639,41 @@ public class NodeDefinitionAnalyzer
                     Name = a.Name,
                     Type = a.Type,
                     Required = a.Required,
-                    CanBeNull = a.Nullable
-                }).ToArray();
+                    CanBeNull = a.Nullable,
+                })
+                .ToArray();
 
             var dataOutPins = t.GetCustomAttributes<FlowNodeDataOutPinMetaAttribute>(true)
-                .Select(a => new DataOutPinDefinition
-                {
-                    Name = a.Name,
-                    Type = a.Type
-                }).ToArray();
+                .Select(a => new DataOutPinDefinition { Name = a.Name, Type = a.Type })
+                .ToArray();
 
             var flowOutPins = t.GetCustomAttributes<FlowNodeOutPinMetaAttribute>(true)
-                .Select(a => new FlowOutPinDefinition
-                {
-                    Name = a.Name
-                }).ToArray();
+                .Select(a => new FlowOutPinDefinition { Name = a.Name })
+                .ToArray();
 
             CustomDataInPinTemplateDefinition? customIn = null;
-            var customInAttr = t.GetCustomAttribute<FlowNodeCustomDataInPinTemplateMetaAttribute>(true);
+            var customInAttr = t.GetCustomAttribute<FlowNodeCustomDataInPinTemplateMetaAttribute>(
+                true
+            );
             if (customInAttr != null)
             {
                 customIn = new CustomDataInPinTemplateDefinition
                 {
                     Type = customInAttr.Type,
-                    Required = customInAttr.Required
+                    Required = customInAttr.Required,
                 };
             }
 
             CustomFlowOutPinTemplateDefinition? customOut = null;
-            var customOutAttr = t.GetCustomAttribute<FlowNodeCustomOutPinTemplateMetaAttribute>(true);
+            var customOutAttr = t.GetCustomAttribute<FlowNodeCustomOutPinTemplateMetaAttribute>(
+                true
+            );
             if (customOutAttr != null)
             {
-                customOut = new CustomFlowOutPinTemplateDefinition
-                {
-                    Name = customOutAttr.Name
-                };
+                customOut = new CustomFlowOutPinTemplateDefinition { Name = customOutAttr.Name };
             }
+
+            var deploymentHook = t.GetCustomAttribute<FlowNodeDeploymentHookMetaAttribute>()?.Key;
 
             // Try to get embedded markdown content, fallback to generated markdown
             var embeddedMarkdown = GetEmbeddedMarkdown(asm, t.Name);
@@ -629,7 +696,8 @@ public class NodeDefinitionAnalyzer
                 DataOutPins = dataOutPins,
                 FlowOutPins = flowOutPins,
                 Package = pkg,
-                EventName = eventName
+                EventName = eventName,
+                DeploymentHook = deploymentHook,
             };
 
             list.Add(def);
@@ -643,12 +711,18 @@ public class NodeDefinitionAnalyzer
             AnsiConsole.MarkupLine($"[dim]  Abstract classes: {abstractCount}[/]");
             AnsiConsole.MarkupLine($"[dim]  Interfaces: {interfaceCount}[/]");
             AnsiConsole.MarkupLine($"[dim]  Generic definitions: {genericCount}[/]");
-            AnsiConsole.MarkupLine($"[dim]  Classes without [[FlowNodeMeta]]: {noAttributeCount}[/]");
+            AnsiConsole.MarkupLine(
+                $"[dim]  Classes without [[FlowNodeMeta]]: {noAttributeCount}[/]"
+            );
             AnsiConsole.MarkupLine($"[dim]  Flow node definitions found: {list.Count}[/]");
             AnsiConsole.MarkupLine($"[dim]─────────────────────────────────────[/]");
         }
 
-        try { ctx.Unload(); } catch { }
+        try
+        {
+            ctx.Unload();
+        }
+        catch { }
         return list;
     }
 
@@ -666,7 +740,9 @@ public class NodeDefinitionAnalyzer
             var resourceNames = assembly.GetManifestResourceNames();
 
             // Look for exact match first
-            var exactMatch = resourceNames.FirstOrDefault(name => name.EndsWith(resourceName, StringComparison.OrdinalIgnoreCase));
+            var exactMatch = resourceNames.FirstOrDefault(name =>
+                name.EndsWith(resourceName, StringComparison.OrdinalIgnoreCase)
+            );
             if (exactMatch != null)
             {
                 using var stream = assembly.GetManifestResourceStream(exactMatch);
@@ -679,8 +755,9 @@ public class NodeDefinitionAnalyzer
 
             // Look for any .md file that contains the class name
             var partialMatch = resourceNames.FirstOrDefault(name =>
-                name.Contains(className, StringComparison.OrdinalIgnoreCase) &&
-                name.EndsWith(".md", StringComparison.OrdinalIgnoreCase));
+                name.Contains(className, StringComparison.OrdinalIgnoreCase)
+                && name.EndsWith(".md", StringComparison.OrdinalIgnoreCase)
+            );
 
             if (partialMatch != null)
             {
