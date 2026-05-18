@@ -236,6 +236,11 @@ public class DataOutPinDefinition
     /// Gets or sets the data type of the output pin.
     /// </summary>
     public string? Type { get; set; }
+
+    /// <summary>
+    /// Gets or sets the type binding for context specific type override.
+    /// </summary>
+    public string? TypeBinding { get; set; }
 }
 
 /// <summary>
@@ -644,7 +649,12 @@ public class NodeDefinitionAnalyzer
                 .ToArray();
 
             var dataOutPins = t.GetCustomAttributes<FlowNodeDataOutPinMetaAttribute>(true)
-                .Select(a => new DataOutPinDefinition { Name = a.Name, Type = a.Type })
+                .Select(a => new DataOutPinDefinition
+                {
+                    Name = a.Name,
+                    Type = a.Type,
+                    TypeBinding = a.TypeBinding,
+                })
                 .ToArray();
 
             var flowOutPins = t.GetCustomAttributes<FlowNodeOutPinMetaAttribute>(true)
